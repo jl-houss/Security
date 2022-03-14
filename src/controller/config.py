@@ -1,8 +1,11 @@
+import sys
+
 app = None
 
+cache_file = sys.path[0] + "\\cache\\cache.json"
 cache = {}
 
-db = None
+db = sys.path[0] + "\\cache\\main.db"
 
 session = False
 user_id = None

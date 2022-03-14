@@ -3,33 +3,32 @@ import sys
 import json
 from datetime import date, datetime
 from src.controller import config
-from src.view.Connections import login
+from src.view import *
 
 def init_cache():
     try:
-        db = ((str(open(sys.path[0] + "\\cache\\main.db", "x"))).split("'"))[1]
+        db = ((str(open(config.db, "x"))).split("'"))[1]
         print("db created")
     except FileNotFoundError:
         os.mkdir(sys.path[0] + "\\cache")
-        db = ((str(open(sys.path[0] + "\\cache\\main.db", "x"))).split("'"))[1]
+        db = ((str(open(config.db, "x"))).split("'"))[1]
         print("cache folder and db created")
     except FileExistsError:
-        db = sys.path[0] + "\\cache\\main.db"
         print("db already exists")
 
     try:
-        open(sys.path[0] + "\\cache\\cache.json", "x")
+        open(config.cache_file, "x")
         cache = {
             "SESSION": {},
-            "DB": db
+            "DB": config.db
         }
 
-        with open(sys.path[0] + "\\cache\\cache.json", "w") as cache_file:
+        with open(config.cache_file, "w") as cache_file:
             json.dump(cache, cache_file, indent=4)
 
         print("cache file created")
     except FileExistsError:
-        with open(sys.path[0] + "\\cache\\cache.json", "r") as cache_file:
+        with open(config.cache_file, "r") as cache_file:
             update_cache(json.load(cache_file))
 
         print("cache file already exists")
@@ -37,12 +36,20 @@ def init_cache():
     print(check_session())
 
 def update_cache(cache: dict):
-    with open(sys.path[0] + "\\cache\\cache.json", "w") as cache_file:
+    # cache:
+    #     {
+    #         "SESSION": {
+    #                 "ID": id,
+    #                 "EXPIRATION_DATE": expiration_date,
+    #                 "KEY": key
+    #             },
+    #         "DB": db
+    #     }
+
+    with open(config.cache_file, "w") as cache_file:
         json.dump(cache, cache_file, indent=4)
 
     config.cache = cache
-
-    config.db = cache['DB']
 
     config.session = True if cache['SESSION'] else False
 
@@ -54,12 +61,15 @@ def update_cache(cache: dict):
 def check_session():
     if config.session:
         if date.today() < datetime.strptime(config.expiration_date, "%Y-%m-%d").date():
+            vault.manager()
             return "connected!"
         else:
             config.cache['SESSION'] = {}
             update_cache(config.cache)
+            login_view.login_page()
             return "session expired!"
     else:
+        login_view.login_page()
         return "no session"
 
 
