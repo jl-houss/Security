@@ -97,9 +97,9 @@ class Authentifiants:
         self.AuthTable.place(x=40, y=100, width=self.vault.winfo_width() - 40, height=self.vault.winfo_height() - 100)
 
     def delete(self):
-        with sqlite3.connect(env['DB'], timeout=3) as conn:
-            curr = conn.cursor()
+        with sqlite3.connect(env['DB']) as conn:
             selected = self.AuthTable.Table.item(self.AuthTable.Table.selection()[0])
+            curr = conn.cursor()
             curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (selected['tags'][0],))
             conn.commit()
             
@@ -192,7 +192,7 @@ class AuthentifiantsTable(CTkFrame):
         self.search()
 
     def search(self):
-        with sqlite3.connect(env['DB'], timeout=3) as conn:
+        with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
             records = curr.execute(f"SELECT * FROM 'Authentifiants' WHERE parentId = ?", (env['USERID'])).fetchall()
             conn.commit()
@@ -518,9 +518,8 @@ class DeletePassword(CTkToplevel):
         self.CancelButton.place(x=160, y=130)
 
     def delete(self):
-        with sqlite3.connect(env['DB'], timeout=3) as conn:
+        with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
-            print(self.loginId)
             curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (self.loginId,))
             conn.commit()
             
@@ -578,7 +577,7 @@ class ActionPopup(Menu):
             self.grab_release()
 
     def copy_password(self):
-        with sqlite3.connect(env['DB'], timeout=3) as conn:
+        with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
             password = curr.execute(f"SELECT password FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()[0]
             conn.commit()
@@ -588,7 +587,7 @@ class ActionPopup(Menu):
         ToastNotifier().show_toast("Security", "Le mot de passe a été copié dans la presse papier", duration=3, threaded=True)
 
     def copy_login(self):
-        with sqlite3.connect(env['DB'], timeout=3) as conn:
+        with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
             username, email = curr.execute(f"SELECT username, email FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()
 

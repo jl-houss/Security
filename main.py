@@ -13,7 +13,7 @@ class App(CTk):
 
         env['DB'] = "main.db"
         
-        with sqlite3.connect(env['DB'], timeout=3) as conn:
+        with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
 
             try:

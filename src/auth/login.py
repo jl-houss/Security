@@ -114,7 +114,7 @@ class Login:
         username = self.UsernameEntry.get()
         passwd = self.PasswordEntry.get()
         if username:
-            with sqlite3.connect(env['DB'], timeout=3) as conn:
+            with sqlite3.connect(env['DB']) as conn:
                 curr = conn.cursor()
                 user = curr.execute("SELECT userId, password FROM 'Users' WHERE username=?", (username,)).fetchone()
                 conn.commit()
