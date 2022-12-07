@@ -108,7 +108,7 @@ class Signin:
         with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
             user = curr.execute("SELECT userId FROM 'Users' WHERE username=?", (username,)).fetchone()
-            conn.commit()
+            
             
 
         if not user:
@@ -120,7 +120,7 @@ class Signin:
                         curr = conn.cursor()
                         curr.execute("INSERT INTO 'Users' (username, password) VALUES (?, ?)",
                             (username, password))
-                        conn.commit()
+                        
                         
                     Finish(self.window)
                     return

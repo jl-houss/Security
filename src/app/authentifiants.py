@@ -101,7 +101,7 @@ class Authentifiants:
             selected = self.AuthTable.Table.item(self.AuthTable.Table.selection()[0])
             curr = conn.cursor()
             curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (selected['tags'][0],))
-            conn.commit()
+            
             
         self.AuthTable.search()
 
@@ -195,7 +195,7 @@ class AuthentifiantsTable(CTkFrame):
         with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
             records = curr.execute(f"SELECT * FROM 'Authentifiants' WHERE parentId = ?", (env['USERID'])).fetchall()
-            conn.commit()
+            
             
         self.Table.delete(*self.Table.get_children())
 
@@ -521,7 +521,7 @@ class DeletePassword(CTkToplevel):
         with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
             curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (self.loginId,))
-            conn.commit()
+            
             
         self.destroy()
         self.vault.AuthTable.search()
@@ -580,7 +580,7 @@ class ActionPopup(Menu):
         with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()
             password = curr.execute(f"SELECT password FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()[0]
-            conn.commit()
+            
             
 
         pyperclip.copy(password_decrypt(password, env['USERPASSWORD']))

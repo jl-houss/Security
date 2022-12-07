@@ -42,7 +42,7 @@ class App(CTk):
                         FOREIGN KEY("parentId") REFERENCES "Users"("userId"),
                         PRIMARY KEY("authId" AUTOINCREMENT)
                     )""")
-            conn.commit()
+            
             
 
         Login(self)

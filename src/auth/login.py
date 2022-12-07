@@ -117,7 +117,7 @@ class Login:
             with sqlite3.connect(env['DB']) as conn:
                 curr = conn.cursor()
                 user = curr.execute("SELECT userId, password FROM 'Users' WHERE username=?", (username,)).fetchone()
-                conn.commit()
+                
                 
             
             if user:
