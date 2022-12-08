@@ -105,10 +105,10 @@ class Signin:
         username = self.UsernameEntry.get()
         password = self.PasswordEntry.get()
         repreatPassword = self.RepeatPasswordEntry.get()
-        with sqlite3.connect(env['DB']) as conn:
-            curr = conn.cursor()
-            user = curr.execute("SELECT userId FROM 'Users' WHERE username=?", (username,)).fetchone()
-            
+        conn = sqlite3.connect(env['DB'])
+        curr = conn.cursor()
+        user = curr.execute("SELECT userId FROM 'Users' WHERE username=?", (username,)).fetchone()
+        conn.close()
             
 
         if not user:
@@ -116,11 +116,11 @@ class Signin:
             if not errors:
                 if password == repreatPassword:
                     password = bcrypt.hashpw(bytes(password, "ascii"), bcrypt.gensalt(14)).decode("ascii")
-                    with sqlite3.connect(env['DB']) as conn:
-                        curr = conn.cursor()
-                        curr.execute("INSERT INTO 'Users' (username, password) VALUES (?, ?)",
-                            (username, password))
-                        
+                    conn = sqlite3.connect(env['DB'])
+                    curr = conn.cursor()
+                    curr.execute("INSERT INTO 'Users' (username, password) VALUES (?, ?)", (username, password))
+                    conn.commit()
+                    conn.close()
                         
                     Finish(self.window)
                     return

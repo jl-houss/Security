@@ -11,39 +11,40 @@ class App(CTk):
         self.title("Security")
         self.resizable(False, False)
 
-        env['DB'] = "test.db"
+        env['DB'] = "main.db"
         
-        with sqlite3.connect(env['DB']) as conn:
-            curr = conn.cursor()
+        conn = sqlite3.connect(env['DB'])
+        curr = conn.cursor()
 
-            try:
-                curr.execute("SELECT * FROM 'Users'")
-            except:
-                curr.execute("""CREATE TABLE "Users" (
-                    "userId"	INTEGER NOT NULL UNIQUE,
-                    "username"	TEXT NOT NULL,
-                    "password"	TEXT NOT NULL,
-                    PRIMARY KEY("userId" AUTOINCREMENT)
-                );""")
+        try:
+            curr.execute("SELECT * FROM 'Users'")
+        except:
+            curr.execute("""CREATE TABLE "Users" (
+                "userId"	INTEGER NOT NULL UNIQUE,
+                "username"	TEXT NOT NULL,
+                "password"	TEXT NOT NULL,
+                PRIMARY KEY("userId" AUTOINCREMENT)
+            );""")
 
-            try:
-                curr.execute("SELECT * FROM 'Authentifiants'")
-            except:
-                curr.execute("""CREATE TABLE "Authentifiants" (
-                        "authId"	INTEGER NOT NULL UNIQUE,
-                        "parentId"	INTEGER,
-                        "title"	    TEXT,
-                        "domain"	TEXT,
-                        "username"	TEXT,
-                        "email"	    TEXT,
-                        "password"	TEXT,
-                        "category"	TEXT,
-                        "note"	    TEXT,
-                        FOREIGN KEY("parentId") REFERENCES "Users"("userId"),
-                        PRIMARY KEY("authId" AUTOINCREMENT)
-                    )""")
-            
-            
+        try:
+            curr.execute("SELECT * FROM Authentifiants")
+        except:
+            curr.execute("""CREATE TABLE "Authentifiants" (
+                    "authId"	INTEGER NOT NULL UNIQUE,
+                    "parentId"	INTEGER,
+                    "title"	    TEXT,
+                    "domain"	TEXT,
+                    "username"	TEXT,
+                    "email"	    TEXT,
+                    "password"	TEXT,
+                    "category"	TEXT,
+                    "note"	    TEXT,
+                    FOREIGN KEY("parentId") REFERENCES "Users"("userId"),
+                    PRIMARY KEY("authId" AUTOINCREMENT)
+                )""")
+
+        conn.commit()
+        conn.close()
 
         Login(self)
 

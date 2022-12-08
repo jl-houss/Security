@@ -15,25 +15,91 @@ import string
 
 
 class Authentifiant:
-    def __init__(self, authId, parentId, title, domain, login, email, password, category, note) -> None:
+    def __init__(self, authId = None, parentId = None, title = None, domain = None, username = None, email = None, password = None, category = "Aucune", note = None):
         self.authId = authId
-        self.parentId = parentId
-        self.title = title
+        self.parentId = parentId if parentId else env['USERID']
+        self.title = title if title else domain
         self.domain = domain
-        self.login = login
+        self.username = username
         self.email = email
         self.password = password
         self.category = category
         self.note = note
 
     def check(self, search):
-        return any(map(lambda x: search in x, [self.title, self.domain, self.login, self.email, self.category]))
+        return any(map(lambda x: search in x, [self.title, self.domain, self.username, self.email, self.category]))
+
+    def insert(self):
+        conn = sqlite3.connect(env['DB'])
+        curr = conn.cursor()
+
+        password = password_encrypt(self.password, env['USERPASSWORD'])
+
+        curr.execute("INSERT INTO Authentifiants (parentId, title, domain, username, email, password, category, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (self.parentId, self.title, self.domain, self.username, self.email, password, self.category, self.note))
+
+        conn.commit()
+        conn.close()
 
     def update(self):
-        pass
+        if self.authId:
+            conn = sqlite3.connect(env['DB'])
+            c = conn.cursor()
+
+            password = password_encrypt(self.password, env['USERPASSWORD'])
+
+            c.execute(f"""
+                UPDATE Authentifiants SET 
+                    title = ?,
+                    domain = ?,
+                    username = ?,
+                    email = ?,
+                    password = ?,
+                    category = ?,
+                    note =  ?
+                WHERE authId=?""", 
+            (self.title, self.domain, self.username, self.email, password, self.category, self.note, self.authId))
+
+            conn.commit()
+            conn.close()
 
     def delete(self):
-        pass
+        if self.authId:
+            conn = sqlite3.connect(env['DB'])
+            curr = conn.cursor()
+
+            curr.execute("DELETE FROM Authentifiants WHERE authId=?", (self.authId,))
+
+            conn.commit()
+            conn.close()
+
+    @staticmethod
+    def get(authId) -> super:
+        conn = sqlite3.connect(env['DB'])
+        curr = conn.cursor()
+
+        authId, parentId, title, domain, username, email, password, *rest = curr.execute("SELECT * FROM Authentifiants WHERE authId=?", (authId,)).fetchone()
+
+        password = password_decrypt(password, env['USERPASSWORD'])
+
+        conn.commit()
+        conn.close()
+
+        return Authentifiant(authId, parentId, title, domain, username, email, password, *rest)
+
+    @staticmethod
+    def generate(uppers: bool, numbers: bool, symbols: bool, len: int):
+        if uppers:
+            all_chars = string.ascii_letters
+        else:
+            all_chars = string.ascii_letters.lower()
+
+        if numbers:
+            all_chars += string.digits
+
+        if symbols:
+            all_chars += string.punctuation
+
+        return "".join(choice(all_chars) for i in range(len))
 
 class Authentifiants:
     def __init__(self, window: CTk, vault: CTkFrame):
@@ -48,11 +114,11 @@ class Authentifiants:
         self.AddButton = CTkButton(
             self.vault, 
             text="Ajouter", 
+            command= lambda: EditPassword(self),
             fg_color=Colors.Teal, 
             text_color=Colors.White, 
             font=Fonts().ButtonFont,
             hover_color=Colors.DarkTeal,
-            command=EditPassword,
             width=150,
             height=40)
         self.AddButton.place(x=40,y=20)
@@ -60,7 +126,7 @@ class Authentifiants:
         self.GenerateButton = CTkButton(
             self.vault, 
             text="Générer un mot de passe",
-            command= self.add,#lambda: GeneratePassword(self.window),
+            command= lambda: GeneratePassword(self.window),
             hover_color=Colors.DarkTeal,
             fg_color=Colors.Mirage, 
             text_color=Colors.White, 
@@ -82,49 +148,8 @@ class Authentifiants:
             height=40)
         self.ExportButton.place(x=430, y=20)
 
-        self.DeleteButton = CTkButton(
-            self.vault, 
-            text="Supprimer cet identifiant", 
-            bg_color=Colors.White,
-            fg_color=Colors.Danger, 
-            text_color=Colors.White,
-            font=Fonts().ButtonFont, 
-            command=lambda: self.delete(),
-            hover_color=Colors.DarkDanger,
-            width=230, 
-            height=40)
-        self.DeleteButton.place(x=430+20+150, y=20)
-
         self.AuthTable = AuthentifiantsTable(self)
         self.AuthTable.place(x=40, y=100, width=self.vault.winfo_width() - 40, height=self.vault.winfo_height() - 100)
-
-    def delete(self):
-        conn = sqlite3.connect(env['DB'])
-        selected = self.AuthTable.Table.item(self.AuthTable.Table.selection()[0])
-        curr = conn.cursor()
-        curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (selected['tags'][0],))
-        conn.close()
-            
-        self.AuthTable.search()
-
-    def add(self):
-        def chk_conn(conn):
-            try:
-                conn.cursor()
-                return True
-            except Exception as ex:
-                return False
-
-        conn = sqlite3.connect(env['DB'])
-        print(chk_conn(conn))
-        
-        #selected = self.AuthTable.Table.item(self.AuthTable.Table.selection()[0])
-        # curr = conn.cursor()
-        # curr.execute("INSERT INTO 'Authentifiants' (parentId, title, username, category) VALUES (1, 'test', 'test', 'test')")
-        # conn.commit()
-        # conn.close()
-            
-        self.AuthTable.search()
 
 class AuthentifiantsTable(CTkFrame):
     def __init__(self, page: Authentifiants):
@@ -215,7 +240,7 @@ class AuthentifiantsTable(CTkFrame):
     def search(self):
         conn = sqlite3.connect(env['DB'])
         curr = conn.cursor()
-        records = curr.execute(f"SELECT * FROM 'Authentifiants' WHERE parentId = ?", (env['USERID'])).fetchall()
+        records = curr.execute(f"SELECT * FROM Authentifiants WHERE parentId = ?", (env['USERID'])).fetchall()
         conn.close()
             
             
@@ -224,7 +249,7 @@ class AuthentifiantsTable(CTkFrame):
         for i, record in enumerate(records):
             auth = Authentifiant(*record)
             if auth.check(self.SearchEntry.get()):
-                values = (auth.title, auth.login if auth.login else auth.email, auth.category, "", "...")
+                values = (auth.title, auth.username if auth.username else auth.email, auth.category, "", "...")
                 self.Table.insert(parent="", index="end", iid=i, values=values, tags=[auth.authId, auth.domain])
 
     def action(self, event: Event, action: str):
@@ -237,25 +262,25 @@ class AuthentifiantsTable(CTkFrame):
             else:
                 selected = self.Table.item(self.Table.selection()[0])
                 tags = selected['tags']
-                #ModifyPassword(self.master, tags[0], self.Table)
+                EditPassword(self.page, tags[0])
         elif region == "cell" and ((action == "<Button-1>" and event.x >= 996) or action == "<Button-3>"):
             row = self.Table.identify_row(event.y)
             tags = self.Table.item(row, 'tags')
             ActionPopup(self.page, event.x, event.y, tags)
 
 class EditPassword(CTkToplevel):
-    def __init__(self, data = None):
+    def __init__(self, vault: Authentifiants, authId = None):
         super().__init__(fg_color=Colors.White)
         self.geometry(f"500x{self.winfo_screenheight() - 70}")
         self.resizable(False, False)
 
-        self.data = data
+        self.vault = vault
+        self.authId = authId
 
         self.view()
 
     def view(self):
-        self.banner = CTkLabel(self, height=150, fg_color=Colors.Mirage, text=f"{'Modifier' if self.data else 'Ajouter'} un identifiant", font=CTkFont("Roboto", 35, "bold"))
-        self.banner.pack(fill="x")
+        CTkLabel(self, height=150, fg_color=Colors.Mirage, text=f"{'Modifier' if self.authId else 'Ajouter'} un identifiant", font=CTkFont("Roboto", 35, "bold")).pack(fill="x")
 
         CTkLabel(self, text="Titre:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=180)
 
@@ -266,6 +291,7 @@ class EditPassword(CTkToplevel):
             height=40, 
             fg_color=Colors.White, 
             border_color=Colors.Mirage, 
+            text_color=Colors.Black,
             border_width=2, 
             font=CTkFont("Roboto", 14, "normal"))
         self.TitleEntry.place(x=185, y=180)
@@ -276,54 +302,207 @@ class EditPassword(CTkToplevel):
             self, 
             placeholder_text="L'url du site", 
             width=240, 
-            height=40, 
+            height=40,
             fg_color=Colors.White, 
             border_color=Colors.Mirage, 
+            text_color=Colors.Black,
             border_width=2, 
             font=CTkFont("Roboto", 14, "normal"))
         self.DomainEntry.place(x=185, y=255)
 
         CTkLabel(self, text="Nom d'utilisateur:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=315)
 
-        self.UsernameEntry = CTkEntry(self, placeholder_text="Le nom d'utilisateur", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.UsernameEntry = CTkEntry(
+            self, 
+            placeholder_text="Le nom d'utilisateur", 
+            width=240, 
+            height=40, 
+            fg_color=Colors.White, 
+            border_color=Colors.Mirage, 
+            text_color=Colors.Black,
+            border_width=2, 
+            font=CTkFont("Roboto", 14, "normal"))
         self.UsernameEntry.place(x=185, y=315)
 
         CTkLabel(self, text="Email:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=375)
 
-        self.EmailEntry = CTkEntry(self, placeholder_text="L'adresse mail", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.EmailEntry = CTkEntry(
+            self, 
+            placeholder_text="L'adresse mail", 
+            width=240, 
+            height=40, 
+            fg_color=Colors.White, 
+            border_color=Colors.Mirage, 
+            text_color=Colors.Black,
+            border_width=2, 
+            font=CTkFont("Roboto", 14, "normal"))
         self.EmailEntry.place(x=185, y=375)
 
         CTkLabel(self, text="Mot de passe:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=435)
 
-        self.PasswordEntry = CTkEntry(self, placeholder_text="Le mot de passe", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.PasswordEntry = CTkEntry(
+            self, 
+            placeholder_text="Le mot de passe", 
+            width=240, 
+            height=40, 
+            fg_color=Colors.White, 
+            border_color=Colors.Mirage, 
+            text_color=Colors.Black,
+            border_width=2, 
+            font=CTkFont("Roboto", 14, "normal"))
         self.PasswordEntry.place(x=185, y=435)
 
-        generatebutton = CTkButton(self, width=40, height=40, fg_color=Colors.Teal, hover_color=Colors.DarkTeal, image=CTkImage(light_image=Image.open("assets/generate.png"), dark_image=Image.open("assets/generate.png")), text="")
-        generatebutton.place(x=440, y=435)
+        self.GenerateButton = CTkButton(
+            self, 
+            width=40, 
+            height=40, 
+            fg_color=Colors.Teal, 
+            hover_color=Colors.DarkTeal, 
+            image=CTkImage(light_image=Image.open("assets/generate.png"), 
+            dark_image=Image.open("assets/generate.png")), 
+            text="")
+        self.GenerateButton.place(x=440, y=435)
 
         CTkLabel(self, text="Catégorie:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=30).place(x=0, y=515)
 
-        self.CategoryOptionMenu = CTkOptionMenu(self, values=["Aucune", "divertissement", "test"], width=150, height=30, fg_color=Colors.Black, font=CTkFont("Roboto", 14, "normal"), variable=StringVar(value="Aucune"), button_color=Colors.Teal, dropdown_fg_color=Colors.Mirage, button_hover_color=Colors.DarkTeal, dropdown_hover_color=Colors.DarkTeal)
+        options = [
+            "Aucune catégorie",
+            "Travail",
+            "Emploi",
+            "Réseaux sociaux",
+            "Divertissement",
+            "Shopping",
+            "Actualités",
+            "Voyage",
+            "Banque",
+            "Santé",
+            "Immobiler",
+            "Technologies",
+            "Autre"
+        ]
+        self.CategoryOptionMenu = CTkOptionMenu(
+            self, 
+            values=options, 
+            width=150, 
+            height=30, 
+            fg_color=Colors.Black, 
+            font=CTkFont("Roboto", 14, "normal"), 
+            variable=StringVar(value="Aucune"), 
+            button_color=Colors.Teal, 
+            dropdown_fg_color=Colors.Mirage, 
+            button_hover_color=Colors.DarkTeal, 
+            dropdown_hover_color=Colors.DarkTeal)
         self.CategoryOptionMenu.place(x=230, y=515)
 
         CTkLabel(self, text="Note:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=575)
         
-        self.NoteEntry = CTkEntry(self, placeholder_text="Ajouter une note", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.NoteEntry = CTkEntry(
+            self, 
+            placeholder_text="Ajouter une note", 
+            width=240, 
+            height=40, 
+            fg_color=Colors.White, 
+            border_color=Colors.Mirage, 
+            text_color=Colors.Black,
+            border_width=2, 
+            font=CTkFont("Roboto", 14, "normal"))
         self.NoteEntry.place(x=185, y=575)
 
-        Savebutton = CTkButton(self, 125, 40, fg_color=Colors.Teal, text="Enregistrer", text_color=Colors.White, font=CTkFont("Roboto", 15, "bold"), hover_color=Colors.DarkTeal)
-        Savebutton.place(x=355, y=(self.winfo_height()-20-40))
+        self.Savebutton = CTkButton(
+            self, 
+            width=125, 
+            height=40, 
+            fg_color=Colors.Teal, 
+            text="Enregistrer", 
+            text_color=Colors.White, 
+            command= self.save,
+            font=CTkFont("Roboto", 15, "bold"), 
+            hover_color=Colors.DarkTeal)
+        self.Savebutton.place(x=355, y=(self.winfo_height()-20-40))
 
-        Cancelbutton = CTkButton(self, 100, 40, fg_color=Colors.White, text="Annuler", text_color=Colors.Black, border_color=Colors.Black, border_width=2, font=CTkFont("Roboto", 15, "bold"), hover_color=Colors.DarkTeal)
-        Cancelbutton.place(x=235, y=(self.winfo_height()-20-40))
+        self.Cancelbutton = CTkButton(
+            self, 
+            width=100, 
+            height=40, 
+            fg_color=Colors.White, 
+            text="Annuler", 
+            text_color=Colors.Black, 
+            border_color=Colors.Black, 
+            border_width=2, 
+            font=CTkFont("Roboto", 15, "bold"), 
+            hover_color=Colors.DarkTeal)
+        self.Cancelbutton.place(x=235, y=(self.winfo_height()-20-40))
 
-        Deletebutton = CTkButton(self, 125, 40, fg_color=Colors.Danger, hover_color=Colors.DarkDanger, text="Supprimer", text_color=Colors.White, font=CTkFont("Roboto", 15, "bold"))
-        Deletebutton.place(x=20, y=(self.winfo_height()-20-40))
-
-        if self.data: self.set()
+        self.Deletebutton = CTkButton(
+            self, 
+            width=125, 
+            height=40, 
+            fg_color=Colors.Danger, 
+            hover_color=Colors.DarkDanger, 
+            text="Supprimer", 
+            text_color=Colors.White, 
+            font=CTkFont("Roboto", 15, "bold"))
+        self.Deletebutton.place(x=20, y=(self.winfo_height()-20-40))
+        
+        # Setting the values
+        if self.authId: self.set()
 
     def set(self):
-        title, domain, username, email, password, category, note = self.data
+        auth: Authentifiant = Authentifiant.get(self.authId)
+
+        if auth.title:
+            self.TitleEntry.insert(0, auth.title)
+
+        if auth.domain:
+            self.DomainEntry.insert(0, auth.domain)
+
+        if auth.username:
+            self.UsernameEntry.insert(0, auth.username)
+
+        if auth.email:
+            self.EmailEntry.insert(0, auth.email)
+
+        if auth.password:
+            self.PasswordEntry.insert(0, auth.password)
+
+        self.CategoryOptionMenu.set(auth.category)
+
+        if auth.note:
+            self.NoteEntry.insert(0, auth.note)
+
+
+    def save(self):
+        title = self.TitleEntry.get()
+        domain = self.DomainEntry.get()
+        username = self.UsernameEntry.get()
+        email = self.EmailEntry.get()
+        password = self.PasswordEntry.get()
+        category = self.CategoryOptionMenu.get()
+        note = self.NoteEntry.get()
+
+        if not domain:
+            print("domain required")
+            return
+
+        if not username and not email:
+            print("username or email required")
+            return
+
+        if not password:
+            print("password required")
+            return
+
+        if not title: title = domain
+
+        
+        auth = Authentifiant(self.authId, None, title, domain, username, email, password, category, note)
+        if self.authId:
+            auth.update()
+        else:
+            auth.insert()
+        
+        self.destroy()
+        self.vault.AuthTable.search()
 
 class GeneratePassword(CTkToplevel):
     def __init__(self, window) -> None:
@@ -337,15 +516,7 @@ class GeneratePassword(CTkToplevel):
         self.view()
 
     def view(self):
-        self.BannerLabel = CTkLabel(
-            self, 
-            text="Générer un mot de passe", 
-            font=Fonts().BannerFont, 
-            justify='center', 
-            text_color=Colors.White,
-            fg_color=Colors.Mirage,
-            height=150)
-        self.BannerLabel.pack(fill="x")
+        CTkLabel(self, text="Générer un mot de passe", font=Fonts().BannerFont, justify='center', text_color=Colors.White, fg_color=Colors.Mirage, height=150).pack(fill="x")
         
         self.PasswordBox = CTkEntry(
             self,
@@ -374,13 +545,7 @@ class GeneratePassword(CTkToplevel):
         )
         self.SecurityProgress.place(x=60, y=270)
 
-        self.SecurityLevel = CTkLabel(
-            self,
-            font=Fonts().NavButtonFont,
-            text="Tres sécurisé !",
-            text_color=Colors.Mirage,
-            height=25
-        )
+        self.SecurityLevel = CTkLabel(self, font=Fonts().NavButtonFont, text="Tres sécurisé !", text_color=Colors.Mirage, height=25)
         self.SecurityLevel.place(x=0, y=305, relwidth=1)
 
         self.LengthSlider = CTkSlider(
@@ -402,15 +567,7 @@ class GeneratePassword(CTkToplevel):
         self.LengthSlider.place(x=60, y=360)
         self.LengthSlider.set(12)
 
-        self.minLength = CTkLabel(
-            self,
-            font=Fonts().EntryFont,
-            text="5",
-            text_color=Colors.Mirage,
-            width=8,
-            height=16
-        )
-        self.minLength.place(x=56, y=380)
+        CTkLabel(self, font=Fonts().EntryFont, text="5", text_color=Colors.Mirage, width=8, height=16).place(x=56, y=380)
 
         self.LengthBox = CTkEntry(
             self,
@@ -423,27 +580,20 @@ class GeneratePassword(CTkToplevel):
             border_width=3,
             textvariable=StringVar(value="12"),
             state="disabled",
+            justify="center",
             width=50,
             height=30)
         self.LengthBox.place(x=225, y=375)
 
-        self.maxLength = CTkLabel(
-            self,
-            font=Fonts().EntryFont,
-            text="30",
-            text_color=Colors.Mirage,
-            width=16,
-            height=16
-        )
-        self.maxLength.place(x=430, y=380)
+        CTkLabel(self, font=Fonts().EntryFont, text="30", text_color=Colors.Mirage, width=16, height=16).place(x=430, y=380)
 
         self.UpperCheck = CTkCheckBox(
             self, 
             text='Majuscules (p. ex. AB)', 
             variable=BooleanVar(), 
             font=Fonts().EntryFont, 
-            onvalue=False, 
-            offvalue=True,
+            onvalue=True, 
+            offvalue=False,
             text_color=Colors.Mirage, 
             bg_color=Colors.White, 
             border_color=Colors.Mirage, 
@@ -453,14 +603,15 @@ class GeneratePassword(CTkToplevel):
             hover_color=Colors.Teal, 
             fg_color=Colors.Teal)
         self.UpperCheck.place(x=50, y=420)
+        self.UpperCheck.select()
 
         self.NumbersCheck = CTkCheckBox(
             self, 
             text='Chiffres (p. ex. 123)', 
             variable=BooleanVar(), 
             font=Fonts().EntryFont, 
-            onvalue=False, 
-            offvalue=True,
+            onvalue=True, 
+            offvalue=False,
             text_color=Colors.Mirage, 
             bg_color=Colors.White, 
             border_color=Colors.Mirage, 
@@ -470,14 +621,15 @@ class GeneratePassword(CTkToplevel):
             hover_color=Colors.Teal, 
             fg_color=Colors.Teal)
         self.NumbersCheck.place(x=50, y=450)
+        self.NumbersCheck.select()
 
         self.SymbolsCheck = CTkCheckBox(
             self, 
             text='Symboles (p. ex. @!$)', 
             variable=BooleanVar(), 
             font=Fonts().EntryFont, 
-            onvalue=False, 
-            offvalue=True, 
+            onvalue=True, 
+            offvalue=False, 
             text_color=Colors.Mirage, 
             bg_color=Colors.White, 
             border_color=Colors.Mirage, 
@@ -487,6 +639,7 @@ class GeneratePassword(CTkToplevel):
             hover_color=Colors.Teal, 
             fg_color=Colors.Teal)
         self.SymbolsCheck.place(x=50, y=480)
+        self.SymbolsCheck.select()
 
         self.GenerateButton = CTkButton(
             self, 
@@ -534,20 +687,15 @@ class GeneratePassword(CTkToplevel):
         self.GenerateButton.invoke()
 
     def generate(self):
-        if not self.UpperCheck.get():
-            all_chars = string.ascii_letters
-        else:
-            all_chars = string.ascii_letters.lower()
+        uppers = bool(self.UpperCheck.get())
+        numbers = bool(self.NumbersCheck.get())
+        symbols = bool(self.SymbolsCheck.get())
+        length = int(self.LengthSlider.get())
 
-        if not self.NumbersCheck.get():
-            all_chars += string.digits
-
-        if not self.SymbolsCheck.get():
-            all_chars += string.punctuation
-
-        self.password = "".join(choice(all_chars) for i in range(int(self.LengthSlider.get())))
+        self.password = Authentifiant.generate(uppers, numbers, symbols, length)
         strength = PasswordStats(self.password).strength()
         self.SecurityProgress.set(strength)
+
         if strength > 0.6:
             strength = {"text": "Tres fort !", "color": Colors.Success}
         elif strength > 0.4:
@@ -566,12 +714,12 @@ class GeneratePassword(CTkToplevel):
         ToastNotifier().show_toast("Security", "Le mot de passe a été copié dans la presse papier", duration=3, threaded=True)
 
 class DeletePassword(CTkToplevel):
-    def __init__(self, loginId, page: Authentifiants) -> None:
+    def __init__(self, authId, page: Authentifiants) -> None:
         super().__init__(page.window, fg_color=Colors.White)
 
         center(550, 200, self)
 
-        self.loginId = loginId
+        self.authId = authId
         self.vault = page
 
         self.view()
@@ -621,10 +769,7 @@ class DeletePassword(CTkToplevel):
         self.CancelButton.place(x=160, y=130)
 
     def delete(self):
-        conn = sqlite3.connect(env['DB'])
-        curr = conn.cursor()
-        curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (self.loginId,))
-        conn.close() 
+        Authentifiant(self.authId).delete()
             
         self.destroy()
         self.vault.AuthTable.search()
@@ -641,7 +786,7 @@ class ActionPopup(Menu):
     def view(self):
         self.add_command(
             label="Voir les détails",
-            #command=lambda: EditPassword(self.master, self.parent), 
+            command=lambda: EditPassword(self.page, self.tags[0]), 
             activebackground=Colors.Teal, 
             activeforeground=Colors.White, 
             font=Fonts().PopupItemFont)
@@ -682,7 +827,7 @@ class ActionPopup(Menu):
     def copy_password(self):
         conn = sqlite3.connect(env['DB'])
         curr = conn.cursor()
-        password = curr.execute(f"SELECT password FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()[0]
+        password = curr.execute(f"SELECT password FROM Authentifiants WHERE authId={self.tags[0]}").fetchone()[0]
         conn.close()
             
 
@@ -692,7 +837,7 @@ class ActionPopup(Menu):
     def copy_login(self):
         conn =  sqlite3.connect(env['DB'])
         curr = conn.cursor()
-        username, email = curr.execute(f"SELECT username, email FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()
+        username, email = curr.execute(f"SELECT username, email FROM Authentifiants WHERE authId={self.tags[0]}").fetchone()
         conn.close()
 
         if username and not username.isspace():
