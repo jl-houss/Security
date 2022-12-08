@@ -16,14 +16,7 @@ class Login:
         self.view()
 
     def view(self):
-        self.BannerLabel = CTkLabel(
-            self.window, 
-            text="SECURITY", 
-            font=Fonts().BannerFont,
-            text_color=Colors.White,
-            fg_color=Colors.Mirage,
-            height=100)
-        self.BannerLabel.pack(fill="x")
+        CTkLabel(self.window, text="SECURITY", font=Fonts().BannerFont, text_color=Colors.White, fg_color=Colors.Mirage, height=100).pack(fill="x")
 
         self.UsernameEntry = CTkEntry(
             self.window, 
@@ -113,6 +106,10 @@ class Login:
     def login(self):
         username = self.UsernameEntry.get()
         passwd = self.PasswordEntry.get()
+        try:
+            self.AlertLabel.destroy()
+        except:
+            pass
         if username:
             conn =  sqlite3.connect(env['DB'])
             curr = conn.cursor()
@@ -140,5 +137,7 @@ class Login:
                     fg_color=Colors.Danger, 
                     font=Fonts().ButtonFont,
                     height=40)
-            self.AlertLabel.place(relwidth=1, y=self.window.winfo_height()-40)
+
+            self.AlertLabel.pack(side="bottom", fill="x")
+            #self.AlertLabel.place(relwidth=1, y=self.window.winfo_height()-40)
 

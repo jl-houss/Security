@@ -105,20 +105,30 @@ class Signin:
         username = self.UsernameEntry.get()
         password = self.PasswordEntry.get()
         repreatPassword = self.RepeatPasswordEntry.get()
+
         conn = sqlite3.connect(env['DB'])
         curr = conn.cursor()
+
         user = curr.execute("SELECT userId FROM 'Users' WHERE username=?", (username,)).fetchone()
+        
         conn.close()
             
+        try:
+            self.AlertLabel.destroy()
+        except:
+            pass
 
         if not user:
             errors = self.errors_in_password(password)
             if not errors:
                 if password == repreatPassword:
                     password = bcrypt.hashpw(bytes(password, "ascii"), bcrypt.gensalt(14)).decode("ascii")
+
                     conn = sqlite3.connect(env['DB'])
                     curr = conn.cursor()
+
                     curr.execute("INSERT INTO 'Users' (username, password) VALUES (?, ?)", (username, password))
+
                     conn.commit()
                     conn.close()
                         
@@ -146,7 +156,7 @@ class Signin:
                 font=Fonts().ButtonFont, 
                 height=40)
 
-        self.AlertLabel.place(relwidth=1, y=self.window.winfo_height()-40)
+        self.AlertLabel.pack(side="bottom", fill="x")
 
     def errors_in_password(self, pwd):
         conds = {

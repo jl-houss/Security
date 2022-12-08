@@ -1,5 +1,5 @@
 import webbrowser
-from customtkinter import CTk, CTkFrame, CTkButton, CTkEntry, CTkScrollbar, W, CENTER, NO, E, CTkToplevel, CTkLabel, StringVar, CTkProgressBar, IntVar, CTkSlider, CTkCheckBox, BooleanVar, CTkOptionMenu, CTkFont, CTkImage
+from customtkinter import CTk, CTkFrame, CTkButton, CTkEntry, CTkScrollbar, W, CENTER, NO, E, CTkToplevel, CTkLabel, StringVar, CTkProgressBar, IntVar, CTkSlider, CTkCheckBox, BooleanVar, CTkOptionMenu, CTkFont, CTkImage, END
 from tkinter.ttk import Style, Treeview
 from PIL import Image
 from tkinter import Event, Menu
@@ -41,7 +41,7 @@ class Authentifiant:
         conn.close()
 
     def update(self):
-        if self.authId:
+        if self.authId is not None:
             conn = sqlite3.connect(env['DB'])
             c = conn.cursor()
 
@@ -63,7 +63,7 @@ class Authentifiant:
             conn.close()
 
     def delete(self):
-        if self.authId:
+        if self.authId is not None:
             conn = sqlite3.connect(env['DB'])
             curr = conn.cursor()
 
@@ -217,8 +217,8 @@ class AuthentifiantsTable(CTkFrame):
         self.Table.column("Actions", anchor=CENTER, width=55)
 
         self.Table.heading("#0", text="", anchor=W)
-        self.Table.heading("Title", text="Nom", anchor=W)
-        self.Table.heading("Login", text="", anchor=W)
+        self.Table.heading("Title", text="Titre", anchor=W)
+        self.Table.heading("Login", text="Nom", anchor=W)
         self.Table.heading("Category", text="Catégorie", anchor=W)
         self.Table.heading("Website", text="", anchor=CENTER)
         self.Table.heading("Actions", text="", anchor=CENTER)
@@ -240,7 +240,9 @@ class AuthentifiantsTable(CTkFrame):
     def search(self):
         conn = sqlite3.connect(env['DB'])
         curr = conn.cursor()
+
         records = curr.execute(f"SELECT * FROM Authentifiants WHERE parentId = ?", (env['USERID'])).fetchall()
+
         conn.close()
             
             
@@ -271,8 +273,12 @@ class AuthentifiantsTable(CTkFrame):
 class EditPassword(CTkToplevel):
     def __init__(self, vault: Authentifiants, authId = None):
         super().__init__(fg_color=Colors.White)
-        self.geometry(f"500x{self.winfo_screenheight() - 70}")
         self.resizable(False, False)
+
+        self.width = 500
+        self.height = self.winfo_screenheight() - 70
+
+        center(self.width, self.height, self)
 
         self.vault = vault
         self.authId = authId
@@ -358,6 +364,7 @@ class EditPassword(CTkToplevel):
             height=40, 
             fg_color=Colors.Teal, 
             hover_color=Colors.DarkTeal, 
+            command= self.generate,
             image=CTkImage(light_image=Image.open("assets/generate.png"), 
             dark_image=Image.open("assets/generate.png")), 
             text="")
@@ -418,7 +425,7 @@ class EditPassword(CTkToplevel):
             command= self.save,
             font=CTkFont("Roboto", 15, "bold"), 
             hover_color=Colors.DarkTeal)
-        self.Savebutton.place(x=355, y=(self.winfo_height()-20-40))
+        self.Savebutton.place(x=355, y=(self.height-20-40))
 
         self.Cancelbutton = CTkButton(
             self, 
@@ -429,23 +436,26 @@ class EditPassword(CTkToplevel):
             text_color=Colors.Black, 
             border_color=Colors.Black, 
             border_width=2, 
+            command= lambda: self.destroy(),
             font=CTkFont("Roboto", 15, "bold"), 
             hover_color=Colors.DarkTeal)
-        self.Cancelbutton.place(x=235, y=(self.winfo_height()-20-40))
+        self.Cancelbutton.place(x=235, y=(self.height-20-40))
 
-        self.Deletebutton = CTkButton(
-            self, 
-            width=125, 
-            height=40, 
-            fg_color=Colors.Danger, 
-            hover_color=Colors.DarkDanger, 
-            text="Supprimer", 
-            text_color=Colors.White, 
-            font=CTkFont("Roboto", 15, "bold"))
-        self.Deletebutton.place(x=20, y=(self.winfo_height()-20-40))
+        if self.authId is not None:
+            self.Deletebutton = CTkButton(
+                self, 
+                width=125, 
+                height=40, 
+                fg_color=Colors.Danger, 
+                command=self.delete,
+                hover_color=Colors.DarkDanger, 
+                text="Supprimer", 
+                text_color=Colors.White, 
+                font=CTkFont("Roboto", 15, "bold"))
+            self.Deletebutton.place(x=20, y=(self.height-20-40))
         
         # Setting the values
-        if self.authId: self.set()
+        if self.authId is not None: self.set()
 
     def set(self):
         auth: Authentifiant = Authentifiant.get(self.authId)
@@ -469,7 +479,6 @@ class EditPassword(CTkToplevel):
 
         if auth.note:
             self.NoteEntry.insert(0, auth.note)
-
 
     def save(self):
         title = self.TitleEntry.get()
@@ -496,7 +505,7 @@ class EditPassword(CTkToplevel):
 
         
         auth = Authentifiant(self.authId, None, title, domain, username, email, password, category, note)
-        if self.authId:
+        if self.authId is not None:
             auth.update()
         else:
             auth.insert()
@@ -504,10 +513,19 @@ class EditPassword(CTkToplevel):
         self.destroy()
         self.vault.AuthTable.search()
 
+    def generate(self):
+        password = Authentifiant.generate(True, True, True, 14)
+
+        self.PasswordEntry.delete(0, END)
+        self.PasswordEntry.insert(0, password)
+
+    def delete(self):
+        DeletePassword(self.authId, self.vault, self)
+
 class GeneratePassword(CTkToplevel):
     def __init__(self, window) -> None:
         super().__init__(window, fg_color=Colors.White)
-        self.resizable(0, 0)
+        self.resizable(False, False)
         self.title("Générateur de mots de passe")
         center(500, 600, self)
 
@@ -523,6 +541,7 @@ class GeneratePassword(CTkToplevel):
             bg_color=Colors.White,
             fg_color=Colors.White,
             font=Fonts().TextBoxFont,
+            justify="center",
             text_color=Colors.Mirage,
             corner_radius=20,
             border_color=Colors.Mirage,
@@ -681,7 +700,9 @@ class GeneratePassword(CTkToplevel):
 
         #Bindings
         self.bind('<Return>', lambda event: self.generate())
-        self.LengthSlider.bind('<ButtonRelease-1>', lambda event: [self.LengthBox.configure(textvariable=StringVar(value=int(self.LengthSlider.get()))), self.generate()])
+        self.LengthSlider.bind('<ButtonRelease-1>', lambda event: [
+            self.LengthBox.configure(textvariable=StringVar(value=str(int(self.LengthSlider.get())))),
+            self.generate()])
 
         #Init invoke
         self.GenerateButton.invoke()
@@ -714,13 +735,14 @@ class GeneratePassword(CTkToplevel):
         ToastNotifier().show_toast("Security", "Le mot de passe a été copié dans la presse papier", duration=3, threaded=True)
 
 class DeletePassword(CTkToplevel):
-    def __init__(self, authId, page: Authentifiants) -> None:
+    def __init__(self, authId, page: Authentifiants, parent = None) -> None:
         super().__init__(page.window, fg_color=Colors.White)
-
+        self.resizable(False, False)
         center(550, 200, self)
 
         self.authId = authId
         self.vault = page
+        self.parent = parent
 
         self.view()
 
@@ -772,6 +794,7 @@ class DeletePassword(CTkToplevel):
         Authentifiant(self.authId).delete()
             
         self.destroy()
+        if self.parent: self.parent.destroy()
         self.vault.AuthTable.search()
 
 class ActionPopup(Menu):
@@ -827,7 +850,9 @@ class ActionPopup(Menu):
     def copy_password(self):
         conn = sqlite3.connect(env['DB'])
         curr = conn.cursor()
+
         password = curr.execute(f"SELECT password FROM Authentifiants WHERE authId={self.tags[0]}").fetchone()[0]
+
         conn.close()
             
 
