@@ -11,7 +11,7 @@ class App(CTk):
         self.title("Security")
         self.resizable(False, False)
 
-        env['DB'] = "main.db"
+        env['DB'] = "test.db"
         
         with sqlite3.connect(env['DB']) as conn:
             curr = conn.cursor()

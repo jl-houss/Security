@@ -1,6 +1,7 @@
 import webbrowser
-from customtkinter import CTk, CTkFrame, CTkButton, CTkEntry, CTkScrollbar, W, CENTER, NO, E, CTkToplevel, CTkLabel, StringVar, CTkProgressBar, IntVar, CTkSlider, CTkCheckBox, BooleanVar
+from customtkinter import CTk, CTkFrame, CTkButton, CTkEntry, CTkScrollbar, W, CENTER, NO, E, CTkToplevel, CTkLabel, StringVar, CTkProgressBar, IntVar, CTkSlider, CTkCheckBox, BooleanVar, CTkOptionMenu, CTkFont, CTkImage
 from tkinter.ttk import Style, Treeview
+from PIL import Image
 from tkinter import Event, Menu
 from assets.ui import Colors, Fonts
 from assets.logic import clear, center, password_decrypt, password_encrypt
@@ -51,6 +52,7 @@ class Authentifiants:
             text_color=Colors.White, 
             font=Fonts().ButtonFont,
             hover_color=Colors.DarkTeal,
+            command=EditPassword,
             width=150,
             height=40)
         self.AddButton.place(x=40,y=20)
@@ -58,7 +60,7 @@ class Authentifiants:
         self.GenerateButton = CTkButton(
             self.vault, 
             text="Générer un mot de passe",
-            command=lambda: GeneratePassword(self.window),
+            command= self.add,#lambda: GeneratePassword(self.window),
             hover_color=Colors.DarkTeal,
             fg_color=Colors.Mirage, 
             text_color=Colors.White, 
@@ -97,11 +99,30 @@ class Authentifiants:
         self.AuthTable.place(x=40, y=100, width=self.vault.winfo_width() - 40, height=self.vault.winfo_height() - 100)
 
     def delete(self):
-        with sqlite3.connect(env['DB']) as conn:
-            selected = self.AuthTable.Table.item(self.AuthTable.Table.selection()[0])
-            curr = conn.cursor()
-            curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (selected['tags'][0],))
+        conn = sqlite3.connect(env['DB'])
+        selected = self.AuthTable.Table.item(self.AuthTable.Table.selection()[0])
+        curr = conn.cursor()
+        curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (selected['tags'][0],))
+        conn.close()
             
+        self.AuthTable.search()
+
+    def add(self):
+        def chk_conn(conn):
+            try:
+                conn.cursor()
+                return True
+            except Exception as ex:
+                return False
+
+        conn = sqlite3.connect(env['DB'])
+        print(chk_conn(conn))
+        
+        #selected = self.AuthTable.Table.item(self.AuthTable.Table.selection()[0])
+        # curr = conn.cursor()
+        # curr.execute("INSERT INTO 'Authentifiants' (parentId, title, username, category) VALUES (1, 'test', 'test', 'test')")
+        # conn.commit()
+        # conn.close()
             
         self.AuthTable.search()
 
@@ -192,9 +213,10 @@ class AuthentifiantsTable(CTkFrame):
         self.search()
 
     def search(self):
-        with sqlite3.connect(env['DB']) as conn:
-            curr = conn.cursor()
-            records = curr.execute(f"SELECT * FROM 'Authentifiants' WHERE parentId = ?", (env['USERID'])).fetchall()
+        conn = sqlite3.connect(env['DB'])
+        curr = conn.cursor()
+        records = curr.execute(f"SELECT * FROM 'Authentifiants' WHERE parentId = ?", (env['USERID'])).fetchall()
+        conn.close()
             
             
         self.Table.delete(*self.Table.get_children())
@@ -221,6 +243,87 @@ class AuthentifiantsTable(CTkFrame):
             tags = self.Table.item(row, 'tags')
             ActionPopup(self.page, event.x, event.y, tags)
 
+class EditPassword(CTkToplevel):
+    def __init__(self, data = None):
+        super().__init__(fg_color=Colors.White)
+        self.geometry(f"500x{self.winfo_screenheight() - 70}")
+        self.resizable(False, False)
+
+        self.data = data
+
+        self.view()
+
+    def view(self):
+        self.banner = CTkLabel(self, height=150, fg_color=Colors.Mirage, text=f"{'Modifier' if self.data else 'Ajouter'} un identifiant", font=CTkFont("Roboto", 35, "bold"))
+        self.banner.pack(fill="x")
+
+        CTkLabel(self, text="Titre:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=180)
+
+        self.TitleEntry = CTkEntry(
+            self, 
+            placeholder_text="Le titre de l'identifiant", 
+            width=240, 
+            height=40, 
+            fg_color=Colors.White, 
+            border_color=Colors.Mirage, 
+            border_width=2, 
+            font=CTkFont("Roboto", 14, "normal"))
+        self.TitleEntry.place(x=185, y=180)
+
+        CTkLabel(self, text="Site web:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=255)
+
+        self.DomainEntry = CTkEntry(
+            self, 
+            placeholder_text="L'url du site", 
+            width=240, 
+            height=40, 
+            fg_color=Colors.White, 
+            border_color=Colors.Mirage, 
+            border_width=2, 
+            font=CTkFont("Roboto", 14, "normal"))
+        self.DomainEntry.place(x=185, y=255)
+
+        CTkLabel(self, text="Nom d'utilisateur:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=315)
+
+        self.UsernameEntry = CTkEntry(self, placeholder_text="Le nom d'utilisateur", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.UsernameEntry.place(x=185, y=315)
+
+        CTkLabel(self, text="Email:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=375)
+
+        self.EmailEntry = CTkEntry(self, placeholder_text="L'adresse mail", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.EmailEntry.place(x=185, y=375)
+
+        CTkLabel(self, text="Mot de passe:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=435)
+
+        self.PasswordEntry = CTkEntry(self, placeholder_text="Le mot de passe", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.PasswordEntry.place(x=185, y=435)
+
+        generatebutton = CTkButton(self, width=40, height=40, fg_color=Colors.Teal, hover_color=Colors.DarkTeal, image=CTkImage(light_image=Image.open("assets/generate.png"), dark_image=Image.open("assets/generate.png")), text="")
+        generatebutton.place(x=440, y=435)
+
+        CTkLabel(self, text="Catégorie:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=30).place(x=0, y=515)
+
+        self.CategoryOptionMenu = CTkOptionMenu(self, values=["Aucune", "divertissement", "test"], width=150, height=30, fg_color=Colors.Black, font=CTkFont("Roboto", 14, "normal"), variable=StringVar(value="Aucune"), button_color=Colors.Teal, dropdown_fg_color=Colors.Mirage, button_hover_color=Colors.DarkTeal, dropdown_hover_color=Colors.DarkTeal)
+        self.CategoryOptionMenu.place(x=230, y=515)
+
+        CTkLabel(self, text="Note:", font=CTkFont("Roboto", 18, "bold"), text_color=Colors.Black, anchor="e", width=170, height=40).place(x=0, y=575)
+        
+        self.NoteEntry = CTkEntry(self, placeholder_text="Ajouter une note", width=240, height=40, fg_color=Colors.White, border_color=Colors.Mirage, border_width=2, font=CTkFont("Roboto", 14, "normal"))
+        self.NoteEntry.place(x=185, y=575)
+
+        Savebutton = CTkButton(self, 125, 40, fg_color=Colors.Teal, text="Enregistrer", text_color=Colors.White, font=CTkFont("Roboto", 15, "bold"), hover_color=Colors.DarkTeal)
+        Savebutton.place(x=355, y=(self.winfo_height()-20-40))
+
+        Cancelbutton = CTkButton(self, 100, 40, fg_color=Colors.White, text="Annuler", text_color=Colors.Black, border_color=Colors.Black, border_width=2, font=CTkFont("Roboto", 15, "bold"), hover_color=Colors.DarkTeal)
+        Cancelbutton.place(x=235, y=(self.winfo_height()-20-40))
+
+        Deletebutton = CTkButton(self, 125, 40, fg_color=Colors.Danger, hover_color=Colors.DarkDanger, text="Supprimer", text_color=Colors.White, font=CTkFont("Roboto", 15, "bold"))
+        Deletebutton.place(x=20, y=(self.winfo_height()-20-40))
+
+        if self.data: self.set()
+
+    def set(self):
+        title, domain, username, email, password, category, note = self.data
 
 class GeneratePassword(CTkToplevel):
     def __init__(self, window) -> None:
@@ -518,10 +621,10 @@ class DeletePassword(CTkToplevel):
         self.CancelButton.place(x=160, y=130)
 
     def delete(self):
-        with sqlite3.connect(env['DB']) as conn:
-            curr = conn.cursor()
-            curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (self.loginId,))
-            
+        conn = sqlite3.connect(env['DB'])
+        curr = conn.cursor()
+        curr.execute("DELETE FROM 'Authentifiants' WHERE authId=?", (self.loginId,))
+        conn.close() 
             
         self.destroy()
         self.vault.AuthTable.search()
@@ -577,19 +680,20 @@ class ActionPopup(Menu):
             self.grab_release()
 
     def copy_password(self):
-        with sqlite3.connect(env['DB']) as conn:
-            curr = conn.cursor()
-            password = curr.execute(f"SELECT password FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()[0]
-            
+        conn = sqlite3.connect(env['DB'])
+        curr = conn.cursor()
+        password = curr.execute(f"SELECT password FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()[0]
+        conn.close()
             
 
         pyperclip.copy(password_decrypt(password, env['USERPASSWORD']))
         ToastNotifier().show_toast("Security", "Le mot de passe a été copié dans la presse papier", duration=3, threaded=True)
 
     def copy_login(self):
-        with sqlite3.connect(env['DB']) as conn:
-            curr = conn.cursor()
-            username, email = curr.execute(f"SELECT username, email FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()
+        conn =  sqlite3.connect(env['DB'])
+        curr = conn.cursor()
+        username, email = curr.execute(f"SELECT username, email FROM 'Authentifiants' WHERE authId={self.tags[0]}").fetchone()
+        conn.close()
 
         if username and not username.isspace():
             pyperclip.copy(username)
