@@ -1,5 +1,6 @@
 from customtkinter import CTkFont
 
+
 class Colors:
     # Main Colors
     Mirage      = "#131B23"
