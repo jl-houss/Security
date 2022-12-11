@@ -174,7 +174,6 @@ class Authentifiant:
 
         return "".join(choice(all_chars) for i in range(len))
 
-
 class Authentifiants:
     def __init__(self, window: CTk, vault: CTkFrame):
         clear(vault)
@@ -230,7 +229,7 @@ class Authentifiants:
             x=40,
             y=100,
             width=self.vault.winfo_width() - 40,
-            height=self.vault.winfo_height() - 100,
+            height=self.vault.winfo_height() - 70,
         )
 
 
@@ -297,11 +296,9 @@ class AuthentifiantsTable(CTkFrame):
         self.Table.heading("Website", text="", anchor=CENTER)
         self.Table.heading("Actions", text="", anchor=CENTER)
 
-        self.Table.place(
-            x=0,
-            y=30,
-            height=self.vault.winfo_height() - 100,
-            width=self.vault.winfo_width() - 55,
+        self.Table.pack(
+            fill="both",
+            expand=True
         )
 
         # Bindings
@@ -507,20 +504,20 @@ class EditPassword(CTkToplevel):
         )
         self.PasswordEntry.place(x=185, y=435)
 
-        self.GenerateButton = CTkButton(
+        self.ActionButton = CTkButton(
             self,
             width=40,
             height=40,
             fg_color=Colors.Teal,
             hover_color=Colors.DarkTeal,
-            command=self.generate,
+            command=self.generate if self.authId is None else self.copy,
             image=CTkImage(
-                light_image=Image.open("assets/imgs/generate.png"),
-                dark_image=Image.open("assets/imgs/generate.png"),
+                light_image=Image.open("assets/imgs/generate.png" if self.authId is None else "assets/imgs/copy.png"),
+                dark_image=Image.open("assets/imgs/generate.png" if self.authId is None else "assets/imgs/copy.png"),
             ),
             text="",
         )
-        self.GenerateButton.place(x=440, y=435)
+        self.ActionButton.place(x=440, y=435)
 
         CTkLabel(
             self,
@@ -696,6 +693,15 @@ class EditPassword(CTkToplevel):
 
         self.PasswordEntry.delete(0, END)
         self.PasswordEntry.insert(0, password)
+
+    def copy(self):
+        pyperclip.copy(self.PasswordEntry.get())
+        ToastNotifier().show_toast(
+            "Security",
+            "Le mot de passe a été copié dans la presse papier",
+            duration=3,
+            threaded=True,
+        )
 
     def delete(self):
         DeletePassword(self.authId, self.vault, self)
@@ -963,7 +969,6 @@ class GeneratePassword(CTkToplevel):
             duration=3,
             threaded=True,
         )
-
 
 class DeletePassword(CTkToplevel):
     def __init__(self, authId, page: Authentifiants, parent=None) -> None:

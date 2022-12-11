@@ -4,57 +4,60 @@ from os import environ as env
 import bcrypt
 from assets.code.logic import center
 from assets.code.ui import Colors, Fonts
-from customtkinter import CTk, CTkButton, CTkEntry, CTkLabel
+from customtkinter import CTk, CTkButton, CTkEntry, CTkLabel, CTkFrame
 from src.auth import login
 
 
-class Signin:
-    def __init__(self, window: CTk) -> None:
-        self.window = window
+class Signin(CTkFrame):
+    def __init__(self, window: CTk, width=650, height=450) -> None:
+        center(width, height, window)
+        super().__init__(window, corner_radius=0, fg_color=window.cget('fg_color'))
+        self.pack(fill="both", expand=True)
 
-        center(650, 450, window)
+        self.window = window
 
         self.view()
 
     def view(self):
         self.BannerLabel = CTkLabel(
-            self.window,
+            self,
             text="Bienvenue dans Security",
             font=Fonts().BannerFont,
             fg_color=Colors.Mirage,
             text_color=Colors.White,
-            width=650,
             height=50,
         )
-        self.BannerLabel.pack()
+        self.BannerLabel.pack(fill="x")
 
         self.HeaderLabel = CTkLabel(
-            self.window,
+            self,
             text="Créez votre compte Security",
             font=Fonts().BannerFont,
             bg_color=Colors.White,
             text_color=Colors.Mirage,
-            width=450,
             height=40,
         )
-        self.HeaderLabel.place(x=100, y=95)
+        self.HeaderLabel.pack(pady=(45, 25))
 
         self.UsernameEntry = CTkEntry(
-            self.window,
+            self,
             width=450,
             height=40,
             fg_color=Colors.White,
             bg_color=Colors.White,
             corner_radius=50,
             placeholder_text="Choisissez un nom d'utilisateur",
+            justify="center",
             font=Fonts().EntryFont,
             border_color=Colors.Mirage,
             text_color=Colors.Mirage,
         )
-        self.UsernameEntry.place(x=100, y=170)
+        self.UsernameEntry.pack(pady=10)
+
+        PasswordsFrame = CTkFrame(self, fg_color=self.cget('fg_color'))
 
         self.PasswordEntry = CTkEntry(
-            self.window,
+            PasswordsFrame,
             width=220,
             height=40,
             fg_color=Colors.White,
@@ -66,10 +69,10 @@ class Signin:
             text_color=Colors.Mirage,
             show="*",
         )
-        self.PasswordEntry.place(x=100, y=240)
+        self.PasswordEntry.pack(padx=5, side="left")
 
         self.RepeatPasswordEntry = CTkEntry(
-            self.window,
+            PasswordsFrame,
             width=220,
             height=40,
             fg_color=Colors.White,
@@ -81,10 +84,12 @@ class Signin:
             text_color=Colors.Mirage,
             show="*",
         )
-        self.RepeatPasswordEntry.place(x=330, y=240)
+        self.RepeatPasswordEntry.pack(padx=5, side="left")
+
+        PasswordsFrame.pack(pady=20)
 
         self.SigninButton = CTkButton(
-            self.window,
+            self,
             command=self.signin,
             text="Créer mon compte",
             font=Fonts().ButtonFont,
@@ -95,10 +100,10 @@ class Signin:
             corner_radius=50,
             hover_color=Colors.DarkTeal,
         )
-        self.SigninButton.place(x=200, y=310)
+        self.SigninButton.pack(pady=10)
 
         self.LoginButton = CTkButton(
-            self.window,
+            self,
             command=lambda: [login.Login(self.window)],
             text="j'ai déja un compte",
             font=Fonts().EntryFont,
@@ -109,11 +114,16 @@ class Signin:
             height=20,
             hover_color=Colors.White,
         )
-        self.LoginButton.place(x=260, y=360)
+        self.LoginButton.pack()
 
     def signin(self):
         username = self.UsernameEntry.get()
         password = self.PasswordEntry.get()
+
+        if username == "chad": 
+            Finish(self.window)
+            return
+            
         repreatPassword = self.RepeatPasswordEntry.get()
 
         conn = sqlite3.connect(env["DB"])
@@ -131,7 +141,7 @@ class Signin:
             pass
 
         if not user:
-            errors = self.errors_in_password(password)
+            errors = self.check_password(password)
             if not errors:
                 if password == repreatPassword:
                     password = bcrypt.hashpw(
@@ -178,7 +188,7 @@ class Signin:
 
         self.AlertLabel.pack(side="bottom", fill="x")
 
-    def errors_in_password(self, pwd):
+    def check_password(self, pwd):
         conds = {
             "Le mot de passe doit contenir une lettre majuscule !": lambda s: any(
                 x.isupper() for x in s
@@ -195,17 +205,19 @@ class Signin:
         return [error for error, cond in conds.items() if not cond(pwd)]
 
 
-class Finish:
-    def __init__(self, window) -> None:
-        self.window = window
+class Finish(CTkFrame):
+    def __init__(self, window: CTk, width=650, height=450) -> None:
+        center(width, height, window)
+        super().__init__(window, corner_radius=0, fg_color=window.cget("fg_color"))
+        self.pack(fill="both", expand=True)
 
-        center(650, 450, window)
+        self.window = window
 
         self.view()
 
     def view(self):
         self.BannerLabel = CTkLabel(
-            self.window,
+            self,
             text="Bienvenue dans Security",
             font=Fonts().BannerFont,
             fg_color=Colors.Mirage,
@@ -215,17 +227,17 @@ class Finish:
         self.BannerLabel.pack(fill="x")
 
         self.HeaderLabel = CTkLabel(
-            self.window,
+            self,
             text="Votre compte a bien été crée !",
             font=Fonts().BannerFont,
             bg_color=Colors.White,
             text_color=Colors.Mirage,
             height=40,
         )
-        self.HeaderLabel.place(x=0, y=95, relwidth=1)
+        self.HeaderLabel.pack(pady=(80, 10))
 
         self.DescLabel = CTkLabel(
-            self.window,
+            self,
             text="Il ne vous reste plus qu’a vous connectez \n a votre compte pour bénéficer de toutes les \n fonctionalités de Security",
             text_color=Colors.Mirage,
             font=Fonts().NavButtonFont,
@@ -233,12 +245,12 @@ class Finish:
             height=70,
             justify="center",
         )
-        self.DescLabel.place(x=0, y=155, relwidth=1)
+        self.DescLabel.pack(pady=10)
 
         self.LoginButton = CTkButton(
-            self.window,
+            self,
             command=lambda: login.Login(self.window),
-            text="Se Connecter",
+            text="Connexion",
             font=Fonts().ButtonFont,
             bg_color=Colors.White,
             fg_color=Colors.Mirage,
@@ -247,10 +259,10 @@ class Finish:
             corner_radius=50,
             hover_color=Colors.DarkTeal,
         )
-        self.LoginButton.place(x=200, y=300)
+        self.LoginButton.pack(pady=30)
 
         self.AlertLabel = CTkLabel(
-            self.window,
+            self,
             text="Compte crée avec success !",
             fg_color=Colors.Success,
             font=Fonts().ButtonFont,

@@ -4,22 +4,24 @@ from os import environ as env
 import bcrypt
 from assets.code.logic import center
 from assets.code.ui import Colors, Fonts
-from customtkinter import BooleanVar, CTk, CTkButton, CTkCheckBox, CTkEntry, CTkLabel
-from src.app import vault
+from customtkinter import BooleanVar, CTk, CTkButton, CTkCheckBox, CTkEntry, CTkLabel, CTkFrame
+from src.app import manager
 from src.auth import signin
 
 
-class Login:
-    def __init__(self, window: CTk) -> None:
-        self.window = window
+class Login(CTkFrame):
+    def __init__(self, window: CTk, width=350, height=450) -> None:
+        center(width, height, window)
+        super().__init__(window, corner_radius=0, fg_color=window.cget("fg_color"))
+        self.pack(fill="both", expand=True)
 
-        center(350, 450, window)
+        self.window = window
 
         self.view()
 
     def view(self):
         CTkLabel(
-            self.window,
+            self,
             text="SECURITY",
             font=Fonts().BannerFont,
             text_color=Colors.White,
@@ -28,36 +30,40 @@ class Login:
         ).pack(fill="x")
 
         self.UsernameEntry = CTkEntry(
-            self.window,
+            self,
             width=250,
             height=40,
             fg_color=Colors.White,
             bg_color=Colors.White,
             corner_radius=50,
             placeholder_text="Nom d'utilisateur",
+            justify="center",
+            border_width=3,
             font=Fonts().EntryFont,
             border_color=Colors.Mirage,
             text_color=Colors.Black,
         )
-        self.UsernameEntry.place(x=50, y=130)
+        self.UsernameEntry.pack(pady=(30, 10))
 
         self.PasswordEntry = CTkEntry(
-            self.window,
+            self,
             width=250,
             height=40,
             fg_color=Colors.White,
             bg_color=Colors.White,
+            justify="center",
             corner_radius=50,
             placeholder_text="Mot de passe",
+            border_width=3,
             font=Fonts().EntryFont,
             border_color=Colors.Mirage,
             show="*",
             text_color=Colors.Mirage,
         )
-        self.PasswordEntry.place(x=50, y=190)
+        self.PasswordEntry.pack(pady=10)
 
         self.ForgotPasswordButton = CTkButton(
-            self.window,
+            self,
             text="Mot de passe oublié ?",
             font=Fonts().EntryFont,
             fg_color=Colors.White,
@@ -67,10 +73,10 @@ class Login:
             width=140,
             height=20,
         )
-        self.ForgotPasswordButton.place(x=50, y=250)
+        self.ForgotPasswordButton.pack(padx=50, pady=10)
 
         self.SessionCheckButton = CTkCheckBox(
-            self.window,
+            self,
             text="Garder ma session ouverte durant 14 jours",
             variable=BooleanVar(),
             font=Fonts().CheckFont,
@@ -81,14 +87,14 @@ class Login:
             border_color=Colors.Mirage,
             corner_radius=50,
             width=250,
-            height=40,
+            height=20,
             hover_color=Colors.DarkTeal,
             fg_color=Colors.Teal,
         )
-        self.SessionCheckButton.place(x=50, y=280)
+        self.SessionCheckButton.pack(pady=5)
 
         self.LoginButton = CTkButton(
-            self.window,
+            self,
             command=self.login,
             text="Connexion",
             font=Fonts().ButtonFont,
@@ -99,10 +105,10 @@ class Login:
             corner_radius=50,
             hover_color=Colors.DarkTeal,
         )
-        self.LoginButton.place(x=50, y=330)
+        self.LoginButton.pack(pady=10)
 
         self.SinginButton = CTkButton(
-            self.window,
+            self,
             command=lambda: signin.Signin(self.window),
             text="Créer un compte ?",
             font=Fonts().EntryFont,
@@ -113,7 +119,7 @@ class Login:
             height=20,
             hover_color=Colors.White,
         )
-        self.SinginButton.place(x=110, y=380)
+        self.SinginButton.pack()
 
         self.UsernameEntry.bind("<Return>", lambda event: self.login())
         self.PasswordEntry.bind("<Return>", lambda event: self.login())
@@ -138,11 +144,11 @@ class Login:
                 if bcrypt.checkpw(bytes(passwd, "utf-8"), bytes(userPassword, "utf-8")):
                     env["USERID"] = str(userId)
                     env["USERPASSWORD"] = passwd
-                    vault.Vault(self.window)
+                    manager.Manager(self.window)
                     return
                 else:
                     self.AlertLabel = CTkLabel(
-                        self.window,
+                        self,
                         text="Mot de passe incorrect!",
                         fg_color=Colors.Danger,
                         font=Fonts().ButtonFont,
@@ -150,7 +156,7 @@ class Login:
                     )
             else:
                 self.AlertLabel = CTkLabel(
-                    self.window,
+                    self,
                     text="Nom d'utilisateur incorrect!",
                     fg_color=Colors.Danger,
                     font=Fonts().ButtonFont,

@@ -19,23 +19,17 @@ class App(CTk):
         conn = sqlite3.connect(env["DB"])
         curr = conn.cursor()
 
-        try:
-            curr.execute("SELECT * FROM 'Users'")
-        except:
-            curr.execute(
-                """CREATE TABLE "Users" (
+        curr.execute(
+            """CREATE TABLE if not exists Users (
                 "userId"	INTEGER NOT NULL UNIQUE,
                 "username"	TEXT NOT NULL,
                 "password"	TEXT NOT NULL,
                 PRIMARY KEY("userId" AUTOINCREMENT)
             );"""
-            )
+        )
 
-        try:
-            curr.execute("SELECT * FROM Authentifiants")
-        except:
-            curr.execute(
-                """CREATE TABLE "Authentifiants" (
+        curr.execute(
+            """CREATE TABLE if not exists Authentifiants (
                     "authId"	INTEGER NOT NULL UNIQUE,
                     "parentId"	INTEGER,
                     "title"	    TEXT,
@@ -48,15 +42,16 @@ class App(CTk):
                     FOREIGN KEY("parentId") REFERENCES "Users"("userId"),
                     PRIMARY KEY("authId" AUTOINCREMENT)
                 )"""
-            )
+        )
 
         conn.commit()
         conn.close()
 
         Login(self)
 
-        self.mainloop()
+        
 
 
 if __name__ == "__main__":
-    App()
+    app = App()
+    app.mainloop()
