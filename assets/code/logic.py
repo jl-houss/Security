@@ -54,3 +54,5 @@ def password_decrypt(token: str, password: str) -> bytes:
     iterations = int.from_bytes(iter, "big")
     key = _derive_key(password.encode(), salt, iterations)
     return Fernet(key).decrypt(token).decode()
+
+print(password_decrypt("67I7Whb6-txtvK7lK6_6egABhqCAAAAAAGOTsqJYUG_7mkNz01yC32TGpa5NR-606eSAwjtdEn4vMQxZPRmT2iCHXOt4kH7BfJQBbj2iSx-zojV-79qEC61ILPz-", "Ht151106"))

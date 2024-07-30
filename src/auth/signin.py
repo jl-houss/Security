@@ -118,12 +118,7 @@ class Signin(CTkFrame):
 
     def signin(self):
         username = self.UsernameEntry.get()
-        password = self.PasswordEntry.get()
-
-        if username == "chad": 
-            Finish(self.window)
-            return
-            
+        password = self.PasswordEntry.get()           
         repreatPassword = self.RepeatPasswordEntry.get()
 
         conn = sqlite3.connect(env["DB"])
